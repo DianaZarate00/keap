@@ -1,3 +1,4 @@
 .cursor/
 .venv/
 .vscode/
+.logs/

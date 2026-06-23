@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 import pandas as pd
@@ -11,13 +12,8 @@ DATASET_ID = "keap"
 TOKEN_TABLE = "oauth_tokens"
 PAGE_TOKEN_FILE = "next_page_token"
 
-# List of reports to process
-REPORTS = [
-    #{"search_id": 1636, "email_id": 708, "action": "sent"},
-    #{"search_id": 1632, "email_id": 1530, "action": "open"},
-    #{"search_id": 1634, "email_id": 1530, "action": "click"}
-    {"search_id": 1664, "email_id": "keap_all_sales"}
-]
+SEARCH_ID = 1664
+TABLE_NAME = "sales_keap"
 
 def get_last_saved_token():
     client = bigquery.Client(project=PROJECT_ID)
@@ -102,28 +98,25 @@ def load_data_to_bigquery(df, table_name):
         autodetect=True,
         write_disposition="WRITE_APPEND"
     )
-    table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}_test"
+    table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
     job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
     job.result()
     print(f"Loaded {len(df)} rows into {table_id}.")
 
 def main():
-    for report in REPORTS:
-        table_name = f"{report['email_id']}_test"
-        try:
-            fetch_data_from_api(
-                search_id=report["search_id"],
-                table_name=table_name
-            )
-            save_next_page_token("", report["search_id"])  # Clear token after success
-            print(f"Completed: {table_name}")
-        except Exception as e:
-            print(f"Error with {table_name}: {e}")
-            token = load_next_page_token(report["search_id"])
-            if token:
-                print(f"Saved page token: {token}")
-            else:
-                print("No saved page token.")
+    try:
+        fetch_data_from_api(search_id=SEARCH_ID, table_name=TABLE_NAME)
+        token_file = f"{PAGE_TOKEN_FILE}_{SEARCH_ID}.txt"
+        if os.path.exists(token_file):
+            os.remove(token_file)
+        print(f"Completed: {TABLE_NAME}")
+    except Exception as e:
+        print(f"Error with {TABLE_NAME}: {e}")
+        token = load_next_page_token(SEARCH_ID)
+        if token:
+            print(f"Saved page token: {token}")
+        else:
+            print("No saved page token.")
 
 if __name__ == "__main__":
     main()
