@@ -1,4 +1,4 @@
 .cursor/
 .venv/
 .vscode/
-.logs/
+logs/
